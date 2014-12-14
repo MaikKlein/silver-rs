@@ -33,7 +33,7 @@ static VS_SRC: &'static str =
         let fs = Shader::new_fs(FS_SRC);
         Program::new(vs, fs)
     }
-    fn create_sprite_tex(ty: GLenum, path: &Path) -> Texture{
+    pub fn create_sprite_tex(ty: GLenum, path: &Path) -> Texture{
         use image::{GenericImage,ImageBuf};
         let tex = Texture::new(gl::TEXTURE_2D);
         Texture::active_texture(gl::TEXTURE0);
@@ -51,7 +51,7 @@ static VS_SRC: &'static str =
                               gl::RGBA, gl::UNSIGNED_BYTE, image.raw_pixels());
         tex
     }
-    fn create_sprite_vao(program: &Program)-> ArrayBuffer{
+pub fn create_sprite_vao(program: &Program)-> ArrayBuffer{
         let v  = vec![
             1.0, 1.0,
             -1.0, 1.0,
@@ -70,8 +70,8 @@ static VS_SRC: &'static str =
         // Create a Vertex Buffer Object and copy the vertex data to it
         Buffer::new(v,gl::STATIC_DRAW);
         // Use shader program
-        Program::bind(program);
-        Program::bind_frag_data_loc(program,"out_color",0);
+        //Program::bind(program);
+        //Program::bind_frag_data_loc(program,"out_color",0);
 
         // Specify the layout of the vertex data
         let pos_attr = Program::get_location(program,"position");
@@ -85,6 +85,7 @@ static VS_SRC: &'static str =
         ArrayBuffer::unbind();
         return vao;
     }
+
     pub struct Sprite{
         program : Program,
         tex : Texture,
@@ -95,7 +96,7 @@ static VS_SRC: &'static str =
         pub fn new()-> Sprite{
             let program = create_sprite_program();
             let vao = create_sprite_vao(&program);
-            let tex = create_sprite_tex(gl::TEXTURE0,&Path::new("/home/maik/Downloads/wood.png"));
+            let tex = create_sprite_tex(gl::TEXTURE0,&Path::new("/home/maik/Downloads/lamp.png"));
             let id = cgmath::Matrix2::identity();
             Sprite{program: program, tex: tex, vao: vao, model: id}
         }
@@ -124,7 +125,7 @@ static VS_SRC: &'static str =
         pub fn new(pos : cgmath::Vector2<GLfloat>) -> Cam2D{
             use cgmath::*;
             let aspect_ratio = width/height;
-            let o = ortho(-aspect_ratio,aspect_ratio,-1.0,1.0, 0.0, 1.0);
+            let o = ortho(-aspect_ratio,aspect_ratio,-1.0,1.0, 0.0, -1.0);
             Cam2D{ortho: o, pos: pos }
         }
 

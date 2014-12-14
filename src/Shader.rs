@@ -6,6 +6,67 @@ use glfw::{Context, OpenGlProfileHint, WindowHint, WindowMode,Action,Key};
 use std::mem;
 use std::ptr;
 use std::str;
+use cgmath::*;
+
+static VS_SRC: &'static str =
+"#version 150\n\
+    uniform vec2 trans;\n\
+    uniform mat2 rot;\n\
+    uniform mat4 view;\n\
+    in vec2 position;\n\
+    in vec2 uv;\n\
+    out vec2 out_uv;\n\
+    void main() {\n\
+       out_uv = uv;
+       vec2 new_pos = (rot * position) + trans;
+       gl_Position =  view * vec4(new_pos, 0.0, 1.0);\n\
+    }";
+
+    static FS_SRC: &'static str =
+        "#version 150\n\
+    uniform sampler2D tex;\n\
+    out vec4 out_color;\n\
+    in vec2 out_uv;\n\
+    void main() {\n\
+       out_color = texture(tex,out_uv);\n\
+    }";
+pub struct Shader2D{
+    program: Program,
+    loc_trans: GLint,
+    loc_tex:   GLint,
+    loc_view:  GLint,
+    loc_rot:  GLint,
+    pub vao: ArrayBuffer
+}
+impl Shader2D{
+    pub fn new() -> Shader2D{
+        use Sprite::*;
+        let vs = Shader::new_vs(VS_SRC);
+        let fs = Shader::new_fs(FS_SRC);
+        let p = Program::new(vs, fs);
+        Program::bind(&p);
+        let loc_tex = Program::get_uniform_location(&p,"tex");
+        let loc_trans = Program::get_uniform_location(&p,"trans");
+        let loc_view = Program::get_uniform_location(&p,"view");
+        let loc_rot = Program::get_uniform_location(&p,"rot");
+        let vao = create_sprite_vao(&p);
+        Shader2D{program:p, loc_trans: loc_trans, loc_view: loc_view, loc_tex: loc_tex, vao: vao,loc_rot:loc_rot}
+    }
+    pub fn render(&self
+              ,trans: &Vector2<GLfloat>
+              ,rot:   Matrix2<GLfloat>
+              ,view:  Matrix4<GLfloat>
+              ,vao:   &ArrayBuffer){
+        Program::bind(&self.program);
+        ArrayBuffer::bind(vao);
+        Program::uniform1i(self.loc_tex,0);
+        Program::uniform2f(self.loc_trans,trans);
+        Program::uniform_mat4(self.loc_view, view);
+        Program::uniform_mat2(self.loc_rot, &rot);
+        Draw::arrays(gl::TRIANGLE_STRIP,0,4);
+        ArrayBuffer::unbind();
+    }
+}
 
 pub struct Shader{
     handle:GLuint
@@ -94,6 +155,11 @@ impl Program{
     pub fn uniform1i(loc :GLint, value: GLint){
         unsafe{
             gl::Uniform1i(loc,value);
+        }
+    }
+    pub fn uniform2f(loc :GLint, v: &cgmath::Vector2<GLfloat>){
+        unsafe{
+            gl::Uniform2f(loc,v.x,v.y);
         }
     }
     pub fn uniform_mat2(loc :GLint, mat: &cgmath::Matrix2<GLfloat>){
