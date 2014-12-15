@@ -22,7 +22,53 @@ mod Actor;
 
 // Shader sources
 
+fn handle_window_event(window: &glfw::Window, 
+                       (time, event): (f64, glfw::WindowEvent)) {
+    match event{
+        glfw::WindowEvent::Key(key, scancode, action, mods) => {
+            println!("Time: {}, Key: {}, ScanCode: {}, Action: {}, Modifiers: [{}]", time, key, scancode, action, mods);
+            match (key,action){
 
+                (Key::Escape,Action::Press) => window.set_should_close(true),
+                _ => {}
+            }
+
+        }
+        _ => {}
+    }
+
+}
+fn game_loop(glfw:   &glfw::Glfw
+             ,window: &glfw::Window
+             ,events: &Receiver<(f64, glfw::WindowEvent)>
+             ,f: |f32|){
+    let mut current_time = glfw.get_time();
+    let mut last_time  = glfw.get_time();
+    while !window.should_close() {
+
+        use Shader::*;
+        use Sprite::*;
+        use cgmath::*;
+        use Handle::*;
+        use Actor::*;
+        last_time = current_time;
+        current_time = glfw.get_time();
+        let dt = (current_time - last_time) as f32;
+        // Poll events
+        glfw.poll_events();
+        for event in glfw::flush_messages(events) {
+            handle_window_event(window, event);
+        }
+
+
+        Draw::clear_color(1.0, 1.0, 1.0, 1.0);
+        Draw::clear(gl::COLOR_BUFFER_BIT);
+
+        f(dt);
+        window.swap_buffers();
+    }
+
+}
 
 
 fn main() {
@@ -58,9 +104,9 @@ fn main() {
     // Load the OpenGL function pointers
     gl::load_with(|s| window.get_proc_address(s));
     unsafe{
-    gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-    gl::Enable( gl::BLEND );
-}
+        gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+        gl::Enable( gl::BLEND );
+    }
     window.set_all_polling(true);
     let mut current_time = glfw.get_time();
     let mut last_time  = glfw.get_time();
@@ -70,33 +116,23 @@ fn main() {
     //let mut s1 = Sprite::new();
 
     let mut a = Actor::new();
-    a.create_actor_default();
-    let tex = create_sprite_tex(gl::TEXTURE0,&Path::new("/home/maik/Downloads/lamp.png"));
-    a.create_actor(Vector2::new(1.0,0.),rad(3.14),tex);
+    let tex = create_sprite_tex(gl::TEXTURE0,&Path::new("/home/maik/Downloads/fox.png"));
+    a.create_actor(Vector2::new(0.0,0.),rad(0.),tex);
+
+    let tex1 = create_sprite_tex(gl::TEXTURE0,&Path::new("/home/maik/Downloads/fox.png"));
+    a.create_actor(Vector2::new(-1.0,0.),rad(0.),tex1);
+
+    let tex2 = create_sprite_tex(gl::TEXTURE0,&Path::new("/home/maik/Downloads/fox.png"));
+    a.create_actor(Vector2::new(1.0,0.),rad(0.),tex2);
     let mut cam = Cam2D::new(Vector2::new(0.,0.));
     let mut angle = 0.0f32;
-    while !window.should_close() {
-        last_time = current_time;
-        current_time = glfw.get_time();
-        let dt = (current_time - last_time) as f32;
-        //s1.rotate(cgmath::rad(1.0f32 * dt));
-        // Poll events
-        glfw.poll_events();
-        for event in glfw::flush_messages(&events) {
-            handle_window_event(&window, event);
-        }
 
+    let shader = Shader2D::new();
 
-        Draw::clear_color(0.3, 0.3, 0.3, 1.0);
-        Draw::clear(gl::COLOR_BUFFER_BIT);
-        //Draw::arrays(gl::TRIANGLE_STRIP,0,4);
-        // Swap buffers
-    //    s.render(&cam);
-    //    s1.render(&cam);
-        a.render(&cam); 
-        window.swap_buffers();
-        println!("{}",1.0/dt);
-    }
+    game_loop(&glfw,&window,&events,|dt|{
+        angle += 1.0 * dt;
+        shader.render(&a,&cam);
+    });
 
     unsafe {
         // Cleanup
@@ -106,20 +142,4 @@ fn main() {
         //    gl::DeleteBuffers(1, &vbo);
         //    gl::DeleteVertexArrays(1, &vao);
     }
-}
-fn handle_window_event(window: &glfw::Window, 
-                       (time, event): (f64, glfw::WindowEvent)) {
-    match event{
-        glfw::WindowEvent::Key(key, scancode, action, mods) => {
-            println!("Time: {}, Key: {}, ScanCode: {}, Action: {}, Modifiers: [{}]", time, key, scancode, action, mods);
-            match (key,action){
-
-                (Key::Escape,Action::Press) => window.set_should_close(true),
-                _ => {}
-            }
-
-        }
-        _ => {}
-    }
-
 }

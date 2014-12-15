@@ -7,6 +7,8 @@ use std::mem;
 use std::ptr;
 use std::str;
 use cgmath::*;
+use Actor;
+use Sprite;
 
 static VS_SRC: &'static str =
 "#version 150\n\
@@ -52,18 +54,22 @@ impl Shader2D{
         let vao = create_sprite_vao(&p);
         Shader2D{program:p, loc_trans: loc_trans, loc_view: loc_view, loc_tex: loc_tex, vao: vao,loc_rot:loc_rot}
     }
-    pub fn render(&self
-              ,trans: &Vector2<GLfloat>
-              ,rot:   Matrix2<GLfloat>
-              ,view:  Matrix4<GLfloat>
-              ,vao:   &ArrayBuffer){
+    pub fn render(&self, a: &Actor::Actor, cam: &Sprite::Cam2D){
         Program::bind(&self.program);
-        ArrayBuffer::bind(vao);
+        ArrayBuffer::bind(&self.vao);
+
+        for index in range(0,a.positions.len()) {
+
+        Texture::active_texture(gl::TEXTURE0);
+        Texture::bind_texture(&a.sprites[index]);
         Program::uniform1i(self.loc_tex,0);
-        Program::uniform2f(self.loc_trans,trans);
-        Program::uniform_mat4(self.loc_view, view);
-        Program::uniform_mat2(self.loc_rot, &rot);
+        Program::uniform2f(self.loc_trans,&a.positions[index]);
+        Program::uniform_mat4(self.loc_view, cam.get_mat());
+        Program::uniform_mat2(self.loc_rot, &Rotation2::from_angle(a.angles[index]).to_matrix2());
         Draw::arrays(gl::TRIANGLE_STRIP,0,4);
+        Texture::unbind();
+        }
+        Program::unbind();
         ArrayBuffer::unbind();
     }
 }
@@ -131,6 +137,11 @@ impl Program{
     pub fn bind(p: &Program){
         unsafe{
             gl::UseProgram(p.handle);
+        }
+    }
+    pub fn unbind(){
+        unsafe{
+            gl::UseProgram(0);
         }
     }
     pub fn get_location(p: &Program, s:&'static str) -> GLint {
@@ -245,6 +256,11 @@ impl Texture{
     pub fn bind_texture(t: &Texture){
         unsafe{
             gl::BindTexture(t.mode,t.handle);
+        }
+    }
+    pub fn unbind(){
+        unsafe{
+            gl::BindTexture(gl::TEXTURE_2D,0);
         }
     }
     pub fn tex_parameter_i(tex : GLenum,mode1:GLenum,mode2:GLuint){
